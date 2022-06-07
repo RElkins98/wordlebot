@@ -13,7 +13,10 @@ day_done = 0
 def debug_print(message, guild):
   with open("wordle_server/debug.txt", "a+") as debug_file:
     now = datetime.strftime(datetime.now(), "%m:%d:%Y %H:%M:%S")
-    debug_file.write(now + " " + guild.replace(" ", "_") + ": " + message + "\n")
+    try:
+      debug_file.write(now + " " + guild.replace(" ", "_") + ": " + message + "\n")
+    except UnicodeEncodeError as e:
+      debug_print(e, "None")
 
 class WordleUser:
   def __init__(self, info):
