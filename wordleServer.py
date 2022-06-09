@@ -1,10 +1,20 @@
 import pymongo
 import pickle
+import discord
 
 class wordleServer:
-  def __init__(self, server_name)
+  def __init__(self)
     self.client = MongoClient()
-    self.db = client[server_name]
+    self.db = client["wordle-server"]
+
+  def make_new_wordle_guild(self, guild)
+    new_guild = {"guild": guild.name, "current_winners": [], "old_winners": [], "users": [], "todays_high": 7}
+    self.db.guilds.insert_one(new_guild)
+
+  def add_new_wordler(self, guild, member)
+    to_add = new WordleUser([member, 0, 7, 0, []])
+    self.db.guilds.update_one({"guild": guild.name}, {'$push': {"users": pickle.dumps(to_add)})
+    del(to_add)
 
   def __del__(self):
     self.db.close()
@@ -18,10 +28,16 @@ class wordleUser:
     self.all_scores = info[4]
 
   def print_user_stats(self):
-    try:
-      return self.user + " has a high score of " + str(self.high_score) + ", an average scor$
-    except TypeError:
-      return self.user + " has a high score of " + str(self.high_score) + ", an average scor$
+    if(self.all_scores == []):
+      try:
+        return self.user.nick + " has no scores yet!  Play some wordle first! :)"
+      except TypeError:
+        return self.user.name + " has no scores yet!  Play some wordle first! :)"
+    else:
+      try:
+        return self.user.nick + " has a high score of " + str(self.high_score) + ", an average scor
+      except TypeError:
+        return self.user.name + " has a high score of " + str(self.high_score) + ", an average scor
 
   def add_new_score(self, new_score):
     self.all_scores.append(new_score)

@@ -139,7 +139,7 @@ async def time_check():
   while not client.is_closed():
     now = datetime.strftime(datetime.now(), '%H:%M')
     if(now == "00:01" and day_done == 0):
-      debug_print("\nCalculating today's winners", "None")
+      debug_print("Calculating today's winners", "None")
       high_score = 7
       current_winners = []
       old_winners = []
@@ -174,6 +174,7 @@ async def time_check():
               cur_yaml["users"][usr_index][1] += 1
               break
           old_winners.append(msg.id)
+          debug_print(msg.author.name + " added to today's winners", msg.guild.name)
           await msg.guild.get_member_named(msg.author.name).add_roles(discord.utils.get(msg.guild.roles, name="Wordle Winner!!"))
           await msg.remove_reaction("⭐", client.user)
           if(high_score == 1):
@@ -194,7 +195,7 @@ async def time_check():
         with open("wordle_server/" + server_file, 'w') as cur_file:
           debug_print(str(cur_yaml), server_file)
           cur_file.write(yaml.dump(cur_yaml))
-    elif(now != "00:01"):
+    elif(now != "00:01" and day_done == 1):
       day_done = 0
     await asyncio.sleep(10)
 
