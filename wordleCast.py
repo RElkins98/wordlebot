@@ -9,103 +9,120 @@ already_winner = 2
 
 
 class wordleUser:
-"""
-User object, conatins information about the guild member and wordle stats
-"""
+  """
+  User object, conatins information about the guild member and wordle stats
+  """
   def __init__(self, member):
-    self.member = member
-    self.id = self.member.id
+    try:
+      self.name = member.nick
+    except TypeError:
+      self.name = member.name
+    if self.name is None:
+      self.name = member.name
+    self.id = member.id
     self.wins = 0
     self.high_score = 7
     self.avg_score = 0
     self.all_scores = []
-
+    print(self.name)
 
   def return_user_stats(self):
-  """
-  Returns wordle stats in the form of [
-  """
-    try:
-      name = self.member.nick
-    except TypeError:
-      name = self.member.name
+    """
+    Returns wordle stats in the form of [
+    """
     if(self.all_scores == []):
       ret = []
     else:
-      ret = [name, self.high_score, self.avg_score, self.wins]
+      ret = [self.name, self.high_score, self.avg_score, self.wins]
     return ret
 
-  def add_new_score(self, new_score):
-  """
-  Adds a new score to a user
-  """
+  def add_new_score(self, new_score: int):
+    """
+    Adds a new score to a user
+    """
     self.all_scores.append(new_score)
     scores = 0
-    tot_score = 0
+    tot_score = sum(self.all_scores)
     if(new_score < self.high_score):
       self.high_score = new_score
     scores = len(self.all_scores)
     self.avg_score = tot_score/scores
     return
+    
+  def pickle_user(self):
+    return pickle.dumps(self)
+
 
 class wordleGuild:
-"""
-Guild Object, contains information about the current wordle users for the guild and today's high score and winners
-"""
+  """
+  Guild Object, contains information about the current wordle users for the guild and today's high score and winners
+  """
   def __init__(self, guild):
-    self.guild = guild
     self.current_winners = {}
     self.todays_high = 7
     self.users = {}
     self.id = guild.id
     self.cur_msgs = []
     
-  def add_score(member, message):
+  async def add_score(self, member, message):
+    print("Adding score to member {}".format(member.id))
     if member.id not in self.users:
+      print("new user!")
       member = make_new_user(member)
-      self.users.update(member.id: member)
+      self.users.update({member.id: member.pickle_user()})
     else:
-      member = users[member.id]
+      member = depickle_user(self.users[member.id])
     score = int(re.search("\d\/6", message.content).group(0)[0])
     member.add_new_score(score)
+    self.users.update({member.id: member.pickle_user()})
     if score == self.todays_high:
       if member.id not in self.current_winners:
-        _add_winner(member, message)
+        await self._add_winner(member, message)
     elif score < self.todays_high:
       if member.id not in self.current_winners:
-        _new_high_score(member, message)
+        await self._new_high_score(member, message)
     else:
       return not_winner
       
   def add_user(self, member):
+    print("member = {}".format(member.name))
     if member.id not in self.users:
       member = make_new_user(member)
-      self.users.update(member.id: member)
+      self.users.update({member.id: member.pickle_user()})
       return True
     else:
       return False
       
-  def refresh(self):
+  def get_user(self, id):
+    if id in self.users:
+      return depickle_user(self.users[id])
+    else:
+      return None
+      
+  async def refresh(self):
     for winner in self.current_winners:
       winner.wins += 1
     self.current_winners = {}
     for msg in self.cur_msgs:
+      msg = pickle.loads(msg)
       await msg.clear_reaction("👑")
     self.cur_msgs = []
     self.todays_high = 7
       
-  def _new_high_score(self, member, message):
+  async def _new_high_score(self, member, message):
+    score = int(re.search("\d\/6", message.content).group(0)[0])
     self.todays_high = score
     self.current_winners = {}
-    self.current_winners.update({member.id, member})
+    self.current_winners.update({member.id: member.pickle_user()})
     for msg in self.cur_msgs:
+      msg = pickle.loads(msg)
       await msg.clear_reaction("👑")
     self.cur_msgs = []
     self.cur_msgs.append("👑")
     
-  def _add_winner(self, member, message):
-    self.current_winners.update({member.id, member})
-    self.cur_msgs.append(message)
+  async def _add_winner(self, member, message):
+    self.current_winners.update({member.id: member.pickle_user()})
+    self.cur_msgs.append(pickle.loads(message))
     await message.add_reaction("👑")
     
   def check_high_score(self):
@@ -119,5 +136,11 @@ Guild Object, contains information about the current wordle users for the guild 
 def make_new_guild(guild):
   return wordleGuild(guild)
   
+def make_new_user(member):
+  return wordleUser(member)
+  
 def depickle_guild(guild):
   return pickle.loads(guild)
+  
+def depickle_user(user):
+  return pickle.loads(user)
